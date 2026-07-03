@@ -90,7 +90,7 @@
                                     <div class="history-row">
                                         <div>
                                             <div>
-                                                <a href="{{ item.view_url }}">{{ item.filename }}</a>
+                                                <a href="{{ item.view_url }}">{{ item.display_name }}</a>
                                             </div>
                                             <div class="meta">
                                                 {{ item.modified }} · {{ item.size_kb }} KB
@@ -163,7 +163,7 @@
         <section id="history" class="section card">
             <h2>История расшифровок</h2>
             <p class="description">
-                Здесь хранятся готовые PDF-расшифровки и служебные JSON-файлы. Загруженные аудио и временные чанки удаляются автоматически.
+                Здесь хранятся готовые PDF-расшифровки.
             </p>
 
             {% if previous_transcriptions %}
@@ -181,7 +181,7 @@
                             <div class="history-row">
                                 <div>
                                     <div>
-                                        <a href="{{ item.view_url }}">{{ item.filename }}</a>
+                                        <a href="{{ item.view_url }}">{{ item.display_name }}</a>
                                     </div>
                                     <div class="meta">
                                         {{ item.modified }} · {{ item.size_kb }} KB
@@ -228,15 +228,24 @@
             button.textContent = "Расшифровываю...";
         }
     
+        let pawsAnimationFrame = null;
+
         function movePawsOnScroll() {
             const scrollY = window.scrollY || window.pageYOffset;
             document.documentElement.style.setProperty("--paw-shift-1", `${scrollY * -0.035}px`);
             document.documentElement.style.setProperty("--paw-shift-2", `${scrollY * 0.050}px`);
             document.documentElement.style.setProperty("--paw-shift-3", `${scrollY * -0.055}px`);
             document.documentElement.style.setProperty("--paw-shift-4", `${scrollY * 0.040}px`);
+            pawsAnimationFrame = null;
         }
 
-        window.addEventListener("scroll", movePawsOnScroll, { passive: true });
+        function requestPawsMove() {
+            if (pawsAnimationFrame === null) {
+                pawsAnimationFrame = requestAnimationFrame(movePawsOnScroll);
+            }
+        }
+
+        window.addEventListener("scroll", requestPawsMove, { passive: true });
         movePawsOnScroll();
 
     </script>

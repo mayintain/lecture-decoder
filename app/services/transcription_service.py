@@ -13,6 +13,7 @@ from app.services.chunk_service import (
 )
 from app.services.correction_service import clean_transcription_result
 from app.services.block_service import build_transcript_blocks
+from app.core.utils import format_time
 
 
 def transcribe_audio_file(
@@ -141,12 +142,6 @@ def shift_chunk_timestamps(result: dict, offset_seconds: float) -> dict:
 
     return shifted_result
 
-
-def format_time(seconds: float) -> str:
-    total_seconds = int(seconds)
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    seconds = total_seconds % 60
 
     if hours > 0:
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"

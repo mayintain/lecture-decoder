@@ -137,16 +137,6 @@ def delete_transcription_result(filename: str):
 
     return RedirectResponse(url="/#history", status_code=303)
 
-    json_path = TASKS_DIR / safe_filename.replace("_transcription.txt", "_transcription.json")
-
-    if txt_path.exists() and txt_path.is_file():
-        txt_path.unlink()
-
-    if json_path.exists() and json_path.is_file():
-        json_path.unlink()
-
-    return RedirectResponse(url="/#history", status_code=303)
-
 
 @app.post("/clear-history")
 def clear_transcription_history():

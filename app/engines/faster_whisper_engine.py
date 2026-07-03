@@ -5,6 +5,7 @@ from faster_whisper import WhisperModel
 from app.core.config import WHISPER_COMPUTE_TYPE, WHISPER_CPU_THREADS
 from app.engines.base import BaseTranscriber
 from app.services.platform_service import get_recommended_cpu_threads
+from app.core.utils import format_time
 
 
 class FasterWhisperEngine(BaseTranscriber):
@@ -79,8 +80,3 @@ class FasterWhisperEngine(BaseTranscriber):
             "segments": structured_segments
         }
 
-
-def format_time(seconds: float) -> str:
-    minutes = int(seconds // 60)
-    seconds = int(seconds % 60)
-    return f"{minutes:02d}:{seconds:02d}"

@@ -3,6 +3,7 @@ from pathlib import Path
 import mlx_whisper
 
 from app.engines.base import BaseTranscriber
+from app.core.utils import format_time
 
 
 MODEL_REPOSITORIES = {
@@ -80,8 +81,3 @@ class MlxWhisperEngine(BaseTranscriber):
             "segments": structured_segments
         }
 
-
-def format_time(seconds: float) -> str:
-    minutes = int(seconds // 60)
-    seconds = int(seconds % 60)
-    return f"{minutes:02d}:{seconds:02d}"

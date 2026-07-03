@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Lecture Decoder</title>
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark"></div>
+                <span>Lecture Decoder</span>
+            </div>
+
+            <nav class="nav">
+                <a href="#home">Главная</a>
+                <a href="#history">История</a>
+                <span class="soon">Конспекты soon</span>
+            </nav>
+        </header>
+
+        <section id="home" class="hero">
+            <div class="paw-bg paw-bg-1"></div>
+            <div class="paw-bg paw-bg-2"></div>
+            <div class="paw-bg paw-bg-3"></div>
+            <div class="paw-bg paw-bg-4"></div>
+
+            <div class="hero-title">
+                <h1>Lecture Decoder</h1>
+                <p class="subtitle">
+                    Загружай лекции, голосовые и длинные записи — получай текст с таймкодами.
+                </p>
+            </div>
+
+            <div class="grid">
+                <div class="card strong">
+                    <h2>Загрузить аудио</h2>
+                    <p class="description">
+                        После обработки временные аудиофайлы удаляются, а расшифровки остаются в истории.
+                    </p>
+
+                    <form action="/transcribe" method="post" enctype="multipart/form-data" onsubmit="showLoading()">
+                        <div>
+                            <label for="audio_file">Аудиофайл</label>
+                            <div class="file-picker">
+                                <input
+                                    type="file"
+                                    id="audio_file"
+                                    name="audio_file"
+                                    accept="audio/*,video/*"
+                                    required
+                                    class="file-input"
+                                    onchange="updateFileName(this)"
+                                >
+                                <label for="audio_file" class="file-button">
+                                    Выбрать файл
+                                </label>
+                                <span id="fileName" class="file-name">Файл не выбран</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="model_size">Модель</label>
+                            <div class="select-shell">
+<select id="model_size" name="model_size">
+                                <option value="large-v3-turbo" selected>large-v3-turbo — основной быстрый режим</option>
+                                <option value="large-v3">large-v3 — максимум качества, медленнее</option>
+                            </select>
+</div>
+                        </div>
+
+
+                        <button id="submitButton" type="submit">Расшифровать</button>
+                    </form>
+
+                    <div id="loading" class="loading">
+                        Идёт расшифровка. Для длинных файлов включится бережный режим с паузами охлаждения.
+                    </div>
+                </div>
+
+                <div class="side-stack">
+
+                    <div class="card">
+                        <h3>Последние расшифровки</h3>
+
+                        {% if previous_transcriptions %}
+                            {% for item in previous_transcriptions[:5] %}
+                                <div class="history-item">
+                                    <div class="history-row">
+                                        <div>
+                                            <div>
+                                                <a href="{{ item.view_url }}">{{ item.filename }}</a>
+                                            </div>
+                                            <div class="meta">
+                                                {{ item.modified }} · {{ item.size_kb }} KB
+                                            </div>
+                                        </div>
+
+                                        <form class="delete-form" action="/delete/{{ item.filename }}" method="post" onsubmit="return confirm('Удалить эту расшифровку?')">
+                                            <button class="delete-button" type="submit">Удалить</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="description">Пока нет сохранённых расшифровок.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if result %}
+            <div class="card result-card">
+                <h2>Готово</h2>
+
+                {% if result_filename %}
+                    <a class="download-link" href="/download/{{ result_filename }}">Открыть PDF</a>
+                {% endif %}
+
+                <p class="meta">
+                    Режим обработки: {{ result.processing_mode }}
+                    {% if result.postprocessing_enabled %}
+                        · постобработка включена
+                    {% endif %}
+                    {% if result.chunks_count %}
+                        · чанков: {{ result.chunks_count }}
+                    {% endif %}
+                </p>
+
+                <div class="preview-note">
+                    Показано короткое превью. Полная расшифровка доступна в PDF.
+                </div>
+                <div class="transcript-list">
+                    {% if result.blocks %}
+                        {% for block in result.blocks[:6] %}
+                            <div class="transcript-row transcript-block">
+                                <span class="transcript-time">{{ block.time_range }}</span>
+                                <p class="transcript-text">{{ block.text }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        {% for line in result.lines[:12] %}
+                            {% set parts = line.split('] ', 1) %}
+                            {% if parts|length > 1 %}
+                                <div class="transcript-row">
+                                    <span class="transcript-time">{{ parts[0][1:] }}</span>
+                                    <p class="transcript-text">{{ parts[1] }}</p>
+                                </div>
+                            {% else %}
+                                <div class="transcript-row">
+                                    <span class="transcript-time">—</span>
+                                    <p class="transcript-text">{{ line }}</p>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </section>
+
+        <section id="history" class="section card">
+            <h2>История расшифровок</h2>
+            <p class="description">
+                Здесь хранятся готовые PDF-расшифровки и служебные JSON-файлы. Загруженные аудио и временные чанки удаляются автоматически.
+            </p>
+
+            {% if previous_transcriptions %}
+                <div class="history-actions">
+                    <form action="/clear-history" method="post" onsubmit="return confirm('Удалить всю историю расшифровок?')">
+                        <button class="clear-history-button" type="submit">Очистить всю историю</button>
+                    </form>
+                </div>
+            {% endif %}
+
+            {% if previous_transcriptions %}
+                <div class="history-list">
+                    {% for item in previous_transcriptions %}
+                        <div class="history-item">
+                            <div class="history-row">
+                                <div>
+                                    <div>
+                                        <a href="{{ item.view_url }}">{{ item.filename }}</a>
+                                    </div>
+                                    <div class="meta">
+                                        {{ item.modified }} · {{ item.size_kb }} KB
+                                    </div>
+                                </div>
+
+                                <form class="delete-form" action="/delete/{{ item.filename }}" method="post" onsubmit="return confirm('Удалить эту расшифровку?')">
+                                    <button class="delete-button" type="submit">Удалить</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="description">Пока нет сохранённых расшифровок.</p>
+            {% endif %}
+        </section>
+
+        <section id="notes" class="section card soon-card">
+            <h2>Конспекты soon</h2>
+            <p class="description">
+                Следующий этап: реализовать ИИ-конспекты по расшифровкам.
+            </p>
+        </section>
+    </main>
+
+    <script>
+        function updateFileName(input) {
+            const fileName = document.getElementById("fileName");
+
+            if (input.files && input.files.length > 0) {
+                fileName.textContent = input.files[0].name;
+            } else {
+                fileName.textContent = "Файл не выбран";
+            }
+        }
+
+        function showLoading() {
+            const loading = document.getElementById("loading");
+            const button = document.getElementById("submitButton");
+
+            loading.style.display = "block";
+            button.disabled = true;
+            button.textContent = "Расшифровываю...";
+        }
+    
+        function movePawsOnScroll() {
+            const scrollY = window.scrollY || window.pageYOffset;
+            document.documentElement.style.setProperty("--paw-shift-1", `${scrollY * -0.035}px`);
+            document.documentElement.style.setProperty("--paw-shift-2", `${scrollY * 0.050}px`);
+            document.documentElement.style.setProperty("--paw-shift-3", `${scrollY * -0.055}px`);
+            document.documentElement.style.setProperty("--paw-shift-4", `${scrollY * 0.040}px`);
+        }
+
+        window.addEventListener("scroll", movePawsOnScroll, { passive: true });
+        movePawsOnScroll();
+
+    </script>
+</body>
+</html>

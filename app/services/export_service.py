@@ -8,14 +8,16 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
-from app.core.config import TASKS_DIR
+from app.core.config import BASE_DIR, TASKS_DIR
 
 
-def save_transcription(audio_path: Path, result: dict) -> Path:
+def save_transcription(audio_path: Path, result: dict, source_filename: str | None = None) -> Path:
     pdf_file_path = TASKS_DIR / f"{audio_path.stem}_transcription.pdf"
     json_file_path = TASKS_DIR / f"{audio_path.stem}_transcription.json"
 
-    result["source_filename"] = audio_path.name
+    display_filename = source_filename or audio_path.name
+
+    result["source_filename"] = display_filename
     result["pdf_filename"] = pdf_file_path.name
 
     with open(json_file_path, "w", encoding="utf-8") as file:
@@ -23,7 +25,7 @@ def save_transcription(audio_path: Path, result: dict) -> Path:
 
     save_transcription_pdf(
         pdf_file_path=pdf_file_path,
-        source_filename=audio_path.name,
+        source_filename=display_filename,
         result=result
     )
 
@@ -102,28 +104,30 @@ def save_transcription_pdf(
 
 
 def register_readable_font() -> str:
-    """
-    ReportLab built-in fonts do not support Cyrillic properly.
-    We try common system fonts for macOS / Linux / Windows.
-    """
     candidates = [
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-        "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
-        "/Library/Fonts/Arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-        "C:/Windows/Fonts/calibri.ttf",
+        BASE_DIR / "app" / "static" / "fonts" / "ReadableFont.ttf",
+        BASE_DIR / "app" / "static" / "fonts" / "PTFreeSans.ttf",
+        BASE_DIR / "app" / "static" / "fonts" / "DejaVuSans.ttf",
+        BASE_DIR / "app" / "static" / "fonts" / "Inter.ttf",
+        Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Times New Roman.ttf"),
+        Path("/Library/Fonts/Arial.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+        Path("C:/Windows/Fonts/arial.ttf"),
+        Path("C:/Windows/Fonts/calibri.ttf"),
     ]
 
     for font_path in candidates:
-        path = Path(font_path)
-        if path.exists():
-            pdfmetrics.registerFont(TTFont("ReadableFont", str(path)))
+        if font_path.exists():
+            pdfmetrics.registerFont(TTFont("ReadableFont", str(font_path)))
             return "ReadableFont"
 
-    return "Helvetica"
+    raise RuntimeError(
+        "No Cyrillic-compatible PDF font found. "
+        "Add a .ttf font file to app/static/fonts/ReadableFont.ttf."
+    )
 
 
 def escape_text(text: str) -> str:

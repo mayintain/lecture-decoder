@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+from uuid import uuid4
 import json
 from urllib.parse import quote
 
@@ -45,7 +46,9 @@ def transcribe(
     model_size: str = Form("large-v3-turbo"),
     diarize: bool = Form(False)
 ):
-    file_path = UPLOADS_DIR / audio_file.filename
+    original_filename = Path(audio_file.filename).name
+    unique_filename = f"{uuid4().hex}_{original_filename}"
+    file_path = UPLOADS_DIR / unique_filename
     prepared_audio_path = None
     result = None
     result_file_path = None
@@ -62,7 +65,11 @@ def transcribe(
             diarize=diarize
         )
 
-        result_file_path = save_transcription(file_path, result)
+        result_file_path = save_transcription(
+            file_path,
+            result,
+            source_filename=original_filename
+        )
 
     finally:
         cleanup_temp_audio_files(
